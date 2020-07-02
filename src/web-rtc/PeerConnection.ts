@@ -1,4 +1,4 @@
-import { SocketAPI } from '@rtc-demo/api'
+import { SocketAPI } from '@web-rtc-demo/shared'
 
 const ICE_SERVERS: RTCIceServer[] = [
   // { urls: 'stun:stunserver.org:3478' },
@@ -19,7 +19,8 @@ export class PeerConnection {
   public connection: RTCPeerConnection
   public localPeerId: string
   public remotePeerId: string
-  public remoteStream: MediaStream | null;
+  private remoteStream: MediaStream | null;
+  private remotePeerVideo: HTMLVideoElement | null;
   private socketAPI: SocketAPI
 
   constructor (params: PeerConnectionInit) {
@@ -28,14 +29,14 @@ export class PeerConnection {
     this.socketAPI = params.socketAPI
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
     this.remoteStream = null
+    this.remotePeerVideo = null
 
     params.localStream.getTracks().map((track) => this.connection.addTrack(track, params.localStream))
     this.registerICECandidatesListener()
 
     this.connection.addEventListener('track', (event) => {
       [this.remoteStream] = event.streams
-      // const [remoteStream] = event.streams
-      // this.video.srcObject = remoteStream
+      if (this.remotePeerVideo) this.remotePeerVideo.srcObject = this.remoteStream
     })
   }
 
@@ -55,8 +56,9 @@ export class PeerConnection {
     return this
   }
 
-  public applyRemoteStream (video: HTMLVideoElement): PeerConnection {
-    video.srcObject = this.remoteStream
+  public registerVideo (video: HTMLVideoElement): PeerConnection {
+    this.remotePeerVideo = video
+    if (this.remoteStream) this.remotePeerVideo.srcObject = this.remoteStream
     return this
   }
 

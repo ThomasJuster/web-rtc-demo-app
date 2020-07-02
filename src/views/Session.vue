@@ -1,7 +1,6 @@
 <script>
-import { SocketAPI, SOCKET_ROUTE } from '@rtc-demo/api'
+import { SocketAPI, SOCKET_ROUTE, ServerAPI } from '@web-rtc-demo/shared'
 import Modal from '../components/Modal.vue'
-import { serverAPI } from '../serverAPI'
 import { PeersManager } from '../web-rtc/PeersManager'
 
 function getRandomPeerId () {
@@ -28,22 +27,20 @@ export default {
   }),
 
   async mounted () {
+    const { serverUrl, password } = this.$route.query
+    const serverAPI = new ServerAPI({ url: new URL(serverUrl).origin })
+
     this.joinSessionLoading = true
     console.info('local peer id', this.localPeerId)
     try {
-      const searchParams = new URLSearchParams(window.location.search)
-      console.info('joinSession()', this.$route.params.sessionName, searchParams.get('password'))
-      const joinSessionResult = await serverAPI.joinSession(this.$route.params.sessionName, searchParams.get('password'))
+      const joinSessionResult = await serverAPI.joinSession(this.$route.params.sessionName, password)
       this.canJoinSession = joinSessionResult.ok
-      console.info('canJoinSession', joinSessionResult.ok)
     } catch (error) {
       console.error(error)
       this.unableToReachServer = true
     }
     this.joinSessionLoading = false
-    if (!this.canJoinSession || this.unableToReachServer) {
-      return
-    }
+    if (!this.canJoinSession || this.unableToReachServer) return
 
     await this.askLocalStream()
   },
@@ -62,14 +59,16 @@ export default {
   methods: {
     finishInitialSetup () {
       this.isLocalPeerSetupReady = true
-      const { sessionName } = this.$route.params
+      const { params: { sessionName }, query: { serverUrl } } = this.$route.params
+      const socketBaseUrl = new URL(serverUrl)
+      socketBaseUrl.protocol = window.location.protocol.replace('http', 'ws')
       const url = SOCKET_ROUTE
         .replace('{sessionName}', sessionName)
         .replace('{peerId}', this.localPeerId)
 
       this.peersManager = new PeersManager({
         socketAPI: new SocketAPI({
-          url: new URL(url, 'ws://localhost:43210').href,
+          url: new URL(url, socketBaseUrl).href,
           sessionName: this.$route.params.sessionName,
           peerId: this.localPeer,
         }),
@@ -77,17 +76,17 @@ export default {
         localStream: this.localStream,
       })
       this.$nextTick(() => {
-        this.applyRemoteStreams()
+        this.registerRemotePeersVideo()
         this.$refs['local-peer-video'].srcObject = this.localStream
       })
       this.$watch('peersManager.size', () => {
-        this.$nextTick(() => this.applyRemoteStreams)
+        this.$nextTick(() => this.registerRemotePeersVideo())
       })
     },
 
-    applyRemoteStreams () {
+    registerRemotePeersVideo () {
       this.peersManager.peerConnections.forEach((peerConnection, remotePeerId) => {
-        peerConnection.applyRemoteStream(this.$refs[remotePeerId])
+        peerConnection.registerVideo(this.$refs[remotePeerId])
       })
     },
 
@@ -108,17 +107,26 @@ export default {
 
 <template>
   <main>
-    <h1>Session {{ $route.params.sessionName }}</h1>
+    <h1>{{ `Session ${$route.params.sessionName}` }}</h1>
+
+    <Modal v-if="!$route.query.serverUrl" fixed open v-on:close="$router.replace('/')">
+      <template v-slot:header>
+        <h3>{{ 'Error !' }}</h3>
+      </template>
+      <p>{{ 'A server URL is required.' }}</p>
+    </Modal>
+
     <Modal fixed :open="!!error" v-on:close="error = undefined">
       <template v-slot:header>
-        <h3>An unknown error occurred</h3>
+        <h3>{{ 'An unknown error occurred' }}</h3>
       </template>
-      <p>This is the error</p>
+      <p>{{ 'This is the error' }}</p>
       <pre v-if="error">
         {{ error.message }}
         {{ error.stack }}
       </pre>
     </Modal>
+
     <Modal fixed :open="unableToReachServer" v-on:close="unableToReachServer = undefined">
       <template v-slot:header>
         <h3>Oopsie…</h3>

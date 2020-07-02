@@ -2,7 +2,7 @@
 // @ is an alias to /src
 // import HelloWorld from '@/components/HelloWorld.vue'
 import Modal from '../components/Modal.vue'
-import { serverAPI } from '../serverAPI'
+import { ServerAPI } from '@web-rtc-demo/shared'
 
 export default {
   name: 'Home',
@@ -13,6 +13,7 @@ export default {
     sessionName: '',
     sessionWithPassword: false,
     password: '',
+    serverUrl: '',
 
     sessionUrl: undefined,
 
@@ -25,6 +26,7 @@ export default {
   }),
   methods: {
     async submit () {
+      const serverAPI = new ServerAPI({ url: new URL(this.serverUrl).origin })
       this.sessionExistsLoading = true
       try {
         const sessionExistsResult = await serverAPI.sessionExists(this.sessionName)
@@ -40,6 +42,7 @@ export default {
           const createSessionResult = await serverAPI.createSession(this.sessionName, this.password)
           this.createdSessionSuccessfully = createSessionResult.ok
           this.sessionUrl = new URL(`/sessions/${this.sessionName}`, window.location.origin)
+          this.sessionUrl.searchParams.set('serverUrl', this.serverUrl)
           if (this.password) this.sessionUrl.searchParams.set('password', this.password)
         } catch (error) {
           this.unableToReachServer = true
@@ -51,6 +54,7 @@ export default {
       // this.sessionName = ''
       // this.sessionWithPassword = false
       // this.password = ''
+      // this.serverUrl = ''
 
       this.unableToReachServer = undefined
 
@@ -76,6 +80,10 @@ export default {
           Start a conference
         </legend>
         <label>
+          Server URL
+          <input type="url" v-model="serverUrl" required>
+        </label>
+        <label>
           Session Name
           <input type="text" class="text-input" v-model="sessionName" required>
         </label>
@@ -85,7 +93,7 @@ export default {
         </label>
         <label v-if="sessionWithPassword">
           Password
-          <input type="text" class="text-input" v-model="password">
+          <input type="password" class="text-input" v-model="password">
         </label>
 
         <hr>
@@ -163,7 +171,7 @@ main {
   max-width: 40em;
   margin: auto;
 }
-input[type=text] {
+input:not([type=radio]):not([type=checkbox]) {
   display: inline-block;
   width: 100%;
   padding: 0.5em;

@@ -1,5 +1,5 @@
+import { SocketAPI, SocketMessage } from '@web-rtc-demo/shared'
 import { PeerConnection } from './PeerConnection'
-import { SocketAPI, SocketMessage } from '@rtc-demo/api'
 
 type PeerId = string
 
