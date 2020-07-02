@@ -150,5 +150,6 @@ export class PeersManager {
 
     // Accept the answer
     peerConnection.connection.setRemoteDescription(socketMessage.description)
+    peerConnection.createChatDataChannel()
   }
 }
