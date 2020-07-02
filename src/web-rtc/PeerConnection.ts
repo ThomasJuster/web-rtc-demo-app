@@ -36,13 +36,14 @@ export class PeerConnection {
 
     this.connection.addEventListener('track', (event) => {
       [this.remoteStream] = event.streams
+      console.debug('PeerConnection: received remote stream')
       if (this.remotePeerVideo) this.remotePeerVideo.srcObject = this.remoteStream
     })
   }
 
   public onClose (listener: PeerConnectionListener): PeerConnection {
     this.connection.addEventListener('connectionstatechange', (event) => {
-      console.debug('connection state change', event, 'connection state:', this.connection.connectionState)
+      console.debug('PeerConnection: connection state change', event, 'connection state:', this.connection.connectionState)
       switch (this.connection.connectionState) {
         case 'closed':
         case 'disconnected':
@@ -58,6 +59,7 @@ export class PeerConnection {
 
   public registerVideo (video: HTMLVideoElement): PeerConnection {
     this.remotePeerVideo = video
+    console.debug('PeerConnection: registerVideo()')
     if (this.remoteStream) this.remotePeerVideo.srcObject = this.remoteStream
     return this
   }
@@ -68,7 +70,8 @@ export class PeerConnection {
     // both peers add the ICE candidates of the other peer.
     this.connection.addEventListener('icecandidate', (event) => {
       if (!event.candidate) return
-      console.debug('emit ICE candidate to', this.remotePeerId, event.candidate)
+      console.debug('PeerConnection: emit ICE candidate to', this.remotePeerId, event.candidate)
+      console.debug('PeerConnection: PeerConnection send ICE candidates')
       this.socketAPI.send({
         type: 'ice-candidate',
         candidate: event.candidate,
@@ -81,12 +84,12 @@ export class PeerConnection {
     // without ICE candidates, the connection would exist but it’d be useless, it’s ICE candidates that allow exchanging data
     this.socketAPI.onIceCandidate((data) => {
       if (data.type !== 'ice-candidate') return
-      console.debug(this.localPeerId, 'receive ice candidate from', data.fromPeerId, data.candidate)
+      console.debug('PeerConnection:', this.localPeerId, 'receive ice candidate from', data.fromPeerId, data.candidate)
       this.connection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error)
     })
 
     this.connection.addEventListener('iceconnectionstatechange', (event) => {
-      console.debug('ice connection state change', event, this.connection.iceConnectionState)
+      console.debug('PeerConnection: ice connection state change', event, this.connection.iceConnectionState)
     })
 
     return this
