@@ -60,28 +60,26 @@ export default {
   methods: {
     finishInitialSetup () {
       this.isLocalPeerSetupReady = true
-      const { serverUrl, sessionName } = this.$route.query
-      const socketBaseUrl = new URL(serverUrl)
-      socketBaseUrl.protocol = window.location.protocol.replace('http', 'ws')
-      const url = SOCKET_ROUTE
-        .replace('{sessionName}', sessionName)
-        .replace('{peerId}', this.localPeerId)
-
-      this.peersManager = new PeersManager({
-        socketAPI: new SocketAPI({
-          url: new URL(url, socketBaseUrl).href,
-          sessionName,
-          peerId: this.localPeer,
-        }),
-        localPeerId: this.localPeerId,
-        localStream: this.localStream,
-      })
       this.$nextTick(() => {
-        this.registerRemotePeersVideo()
         this.$refs['local-peer-video'].srcObject = this.localStream
-      })
-      this.$watch('peersManager.size', () => {
-        this.$nextTick(() => this.registerRemotePeersVideo())
+
+        const { serverUrl, sessionName } = this.$route.query
+        const socketBaseUrl = new URL(serverUrl)
+        socketBaseUrl.protocol = window.location.protocol.replace('http', 'ws')
+        const url = SOCKET_ROUTE
+          .replace('{sessionName}', sessionName)
+          .replace('{peerId}', this.localPeerId)
+
+        this.peersManager = new PeersManager({
+          socketAPI: new SocketAPI({
+            url: new URL(url, socketBaseUrl).href,
+            sessionName,
+            peerId: this.localPeer,
+          }),
+          rootNode: this.$refs['peers-video-root'],
+          localPeerId: this.localPeerId,
+          localStream: this.localStream,
+        })
       })
     },
 
@@ -169,15 +167,7 @@ export default {
     <div v-else>
       <h3>Conference {{ $route.query.sessionName }}</h3>
       <video ref="local-peer-video" playsinline autoplay muted key="local-peer-video"></video>
-      <span style="display: inline-block;" v-if="peersManager">
-        <video
-          v-for="remotePeerId of peersManager.peerConnections.keys()"
-          :key="remotePeerId"
-          :ref="remotePeerId"
-          playsinline
-          autoplay
-        ></video>
-      </span>
+      <span ref="peers-video-root" style="display: inline-block;"></span>
     </div>
   </main>
 </template>

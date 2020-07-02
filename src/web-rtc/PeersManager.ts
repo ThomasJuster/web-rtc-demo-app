@@ -15,31 +15,43 @@ interface PeersInit {
   socketAPI: SocketAPI;
   localPeerId: string;
   localStream: MediaStream;
+  rootNode: HTMLElement;
 }
 export class PeersManager {
   public peerConnections: Map<PeerId, PeerConnection>
   private localPeerId: string
   private localStream: MediaStream
   private socketAPI: SocketAPI
+  private rootNode: HTMLElement
 
-  constructor ({ socketAPI, localPeerId, localStream }: PeersInit) {
+  constructor ({ socketAPI, localPeerId, localStream, rootNode }: PeersInit) {
     this.socketAPI = socketAPI
     this.localPeerId = localPeerId
     this.localStream = localStream
     this.peerConnections = new Map()
+    this.rootNode = rootNode
 
     socketAPI.onConnectedPeers((socketMessage) => this.onConnectedPeers(socketMessage))
     socketAPI.onOffer((socketMessage) => this.onOffer(socketMessage))
     socketAPI.onAnswer((socketMessage) => this.onAnswer(socketMessage))
   }
 
-  public getPeerConnection (remotePeerId: string): PeerConnection {
+  private getPeerConnection (remotePeerId: string): PeerConnection {
     const peerConnection = this.peerConnections.get(remotePeerId)
     if (!peerConnection) {
       console.debug('PeersManager: available peer connections', this.peerConnections, this)
       throw new Error(`No peer connection with remote peer ${remotePeerId}`)
     }
     return peerConnection
+  }
+
+  private setPeerConnection (remotePeerId: string, peerConnection: PeerConnection): PeersManager {
+    const video = this.rootNode.appendChild(document.createElement('video'))
+    video.setAttribute('autoplay', '')
+    video.setAttribute('playsinline', '')
+    peerConnection.registerVideo(video)
+    this.peerConnections.set(remotePeerId, peerConnection)
+    return this
   }
 
   public closeAllConnections () {
@@ -62,7 +74,7 @@ export class PeersManager {
           socketAPI: this.socketAPI,
         })
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
-        this.peerConnections.set(remotePeerId, peerConnection)
+        this.setPeerConnection(remotePeerId, peerConnection)
 
         // Create an offer
         const offer = await peerConnection.connection.createOffer(RTC_OFFER_OPTIONS)
@@ -92,7 +104,7 @@ export class PeersManager {
       localStream: this.localStream,
       socketAPI: this.socketAPI
     })
-    this.peerConnections.set(socketMessage.offererId, peerConnection)
+    this.setPeerConnection(socketMessage.offererId, peerConnection)
 
     // create the answer, apply it to the peer connection
     await peerConnection.connection.setRemoteDescription(socketMessage.description)
