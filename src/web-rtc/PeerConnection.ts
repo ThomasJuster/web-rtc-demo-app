@@ -21,9 +21,10 @@ export class PeerConnection {
   public connection: RTCPeerConnection
   public localPeerId: string
   public remotePeerId: string
-  public peerChatAPI: PeerChatAPI
+  public peerChatAPI: PeerChatAPI | null
   private remoteStream: MediaStream | null
   private remotePeerVideo: HTMLVideoElement | null
+  private chatMessagesRootNode: HTMLElement
   private socketAPI: SocketAPI
 
   constructor (params: PeerConnectionInit) {
@@ -33,12 +34,8 @@ export class PeerConnection {
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
     this.remoteStream = null
     this.remotePeerVideo = null
-    this.peerChatAPI = new PeerChatAPI({
-      dataChannel: this.connection.createDataChannel('chat'),
-      chatMessagesRootNode: params.chatMessagesRootNode,
-      localPeerId: this.localPeerId,
-    })
-    this.onClose(() => this.peerChatAPI.dataChannel.close())
+    this.peerChatAPI = null
+    this.chatMessagesRootNode = params.chatMessagesRootNode
 
     params.localStream.getTracks().map((track) => this.connection.addTrack(track, params.localStream))
     this.registerICECandidatesListener()
@@ -47,6 +44,11 @@ export class PeerConnection {
       [this.remoteStream] = event.streams
       console.debug('PeerConnection: received remote stream')
       if (this.remotePeerVideo) this.remotePeerVideo.srcObject = this.remoteStream
+    })
+
+    this.connection.addEventListener('datachannel', (event) => {
+      console.debug('PeerConnection: received datachannel')
+      this.setChatDataChannel(event.channel)
     })
   }
 
@@ -76,6 +78,22 @@ export class PeerConnection {
   public unregisterVideo (): PeerConnection {
     this.remotePeerVideo = null
     return this
+  }
+
+  public createChatDataChannel () {
+    console.debug('PeerConnection: create and share datachannel')
+    this.setChatDataChannel(this.connection.createDataChannel('chat'))
+  }
+
+  private setChatDataChannel (dataChannel: RTCDataChannel) {
+    this.peerChatAPI = new PeerChatAPI({
+      dataChannel,
+      chatMessagesRootNode: this.chatMessagesRootNode,
+      localPeerId: this.localPeerId
+    })
+    this.onClose(() => {
+      if (this.peerChatAPI) this.peerChatAPI.dataChannel.close()
+    })
   }
 
   private registerICECandidatesListener (): PeerConnection {

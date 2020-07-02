@@ -68,7 +68,11 @@ export class PeersManager {
   public sendChatMessage (message: string) {
     this.peerConnections.forEach((peerConnection) => {
       console.debug('PeersManager: sendChatMessage', message, peerConnection, this)
-      peerConnection.peerChatAPI.sendMessage(message)
+      if (!peerConnection.peerChatAPI) {
+        window.alert('He-hem, wait a bit')
+      } else {
+        peerConnection.peerChatAPI.sendMessage(message)
+      }
     })
   }
 

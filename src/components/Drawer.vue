@@ -39,8 +39,8 @@ export default {
   padding-top: 2em;
   z-index: 1000;
   width: 40em;
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - 2em);
+  max-height: calc(100vh - 2em);
   overflow-y: auto;
   top: 0;
   border-radius: 3px;
