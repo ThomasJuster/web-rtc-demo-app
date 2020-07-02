@@ -83,12 +83,6 @@ export default {
       })
     },
 
-    registerRemotePeersVideo () {
-      this.peersManager.peerConnections.forEach((peerConnection, remotePeerId) => {
-        peerConnection.registerVideo(this.$refs[remotePeerId])
-      })
-    },
-
     async askLocalStream () {
       const mediaTrackConstraints = {
         echoCancellation: true,

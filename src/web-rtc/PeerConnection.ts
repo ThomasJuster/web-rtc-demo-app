@@ -64,6 +64,11 @@ export class PeerConnection {
     return this
   }
 
+  public unregisterVideo (): PeerConnection {
+    this.remotePeerVideo = null
+    return this
+  }
+
   private registerICECandidatesListener (): PeerConnection {
     // NOTE: the icecandidate event is trigger AFTER creating an offer/answer.
     // As soon as we have the local peer’s ice candidates, we send them to the remote peer so that

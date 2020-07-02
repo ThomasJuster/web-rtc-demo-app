@@ -50,6 +50,10 @@ export class PeersManager {
     video.setAttribute('autoplay', '')
     video.setAttribute('playsinline', '')
     peerConnection.registerVideo(video)
+    peerConnection.onClose(() => {
+      peerConnection.unregisterVideo()
+      this.rootNode.removeChild(video)
+    })
     this.peerConnections.set(remotePeerId, peerConnection)
     return this
   }
