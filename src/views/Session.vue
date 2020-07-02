@@ -170,7 +170,7 @@ export default {
     </div>
 
     <div v-else>
-      <h3>Conference {{ $route.query.sessionName }}</h3>
+      <h3>Conference {{ $route.query.sessionName }} − {{ localPeerId }}</h3>
       <p>
         <button v-on:click="isChatDrawerOpened = true">Open chat</button>
       </p>
