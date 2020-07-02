@@ -1,6 +1,7 @@
 <script>
 import { SocketAPI, SOCKET_ROUTE, ServerAPI } from '@web-rtc-demo/shared'
 import Modal from '../components/Modal.vue'
+import Drawer from '../components/Drawer.vue'
 import { PeersManager } from '../web-rtc/PeersManager'
 
 function getRandomPeerId () {
@@ -12,12 +13,16 @@ export default {
   name: 'Session',
   components: {
     Modal,
+    Drawer,
   },
   data: () => ({
     joinSessionLoading: false,
     canJoinSession: undefined,
     unableToReachServer: undefined,
     error: undefined,
+
+    isChatDrawerOpened: false,
+    chatMessage: '',
 
     isLocalPeerSetupReady: false,
     localStream: null,
@@ -76,7 +81,8 @@ export default {
             sessionName,
             peerId: this.localPeer,
           }),
-          rootNode: this.$refs['peers-video-root'],
+          videosRootNode: this.$refs['peers-video-root'],
+          chatMessagesRootNode: this.$refs['chat-messages-root'],
           localPeerId: this.localPeerId,
           localStream: this.localStream,
         })
@@ -93,6 +99,11 @@ export default {
         video: mediaTrackConstraints,
       })
       this.$refs['test-video'].srcObject = this.localStream
+    },
+
+    submitChatMessage () {
+      console.debug('Session: send message', this.chatMessage, this)
+      this.peersManager.sendChatMessage(this.chatMessage)
     },
   },
 }
@@ -160,6 +171,16 @@ export default {
 
     <div v-else>
       <h3>Conference {{ $route.query.sessionName }}</h3>
+      <p>
+        <button v-on:click="isChatDrawerOpened = true">Open chat</button>
+      </p>
+      <Drawer position="left" :open="isChatDrawerOpened" v-on:close="isChatDrawerOpened = false">
+        <div ref="chat-messages-root" class="chat-messages"></div>
+        <form ref="chat-form" class="chat-form" v-on:submit.prevent="submitChatMessage">
+          <input name="message" v-model="chatMessage" placeholder="Type something…" required>
+          <button type="submit">Send 👻</button>
+        </form>
+      </Drawer>
       <video ref="local-peer-video" playsinline autoplay muted key="local-peer-video"></video>
       <span ref="peers-video-root" style="display: inline-block;"></span>
     </div>
@@ -171,5 +192,35 @@ video {
   border-radius: 0.25em;
   display: inline-block;
   margin: 1em;
+  max-width: 100%;
+}
+.chat-messages {
+  padding-bottom: 3em;
+}
+.chat-messages .bubble {
+  padding: .5em;
+  border-radius: 3px;
+  color: white;
+  max-width: 70%;
+}
+.bubble.local-peer {
+  background: cadetblue;
+  margin-left: auto;
+}
+.bubble.remote-peer {
+  background: crimson;
+  margin-right: auto;
+}
+.chat-messages .author {
+  font-weight: bold;
+  font-size: 1.1em;
+  padding: .25em;
+}
+.chat-form {
+  padding: 0.5em 1em;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: calc(100% - 2em);
 }
 </style>

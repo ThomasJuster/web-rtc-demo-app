@@ -38,7 +38,7 @@ export default {
 
 <style scoped>
 .modal {
-  z-index: 1000;
+  z-index: 2000;
 }
 .modal, .backdrop {
   position: absolute;

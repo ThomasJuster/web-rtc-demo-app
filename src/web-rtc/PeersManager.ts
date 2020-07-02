@@ -11,25 +11,28 @@ const RTC_OFFER_OPTIONS: RTCOfferOptions = {
   voiceActivityDetection: true,
 }
 
-interface PeersInit {
+interface PeersManagerInit {
   socketAPI: SocketAPI;
   localPeerId: string;
   localStream: MediaStream;
-  rootNode: HTMLElement;
+  videosRootNode: HTMLElement;
+  chatMessagesRootNode: HTMLElement;
 }
 export class PeersManager {
   public peerConnections: Map<PeerId, PeerConnection>
   private localPeerId: string
   private localStream: MediaStream
   private socketAPI: SocketAPI
-  private rootNode: HTMLElement
+  private videosRootNode: HTMLElement
+  private chatMessagesRootNode: HTMLElement
 
-  constructor ({ socketAPI, localPeerId, localStream, rootNode }: PeersInit) {
+  constructor ({ socketAPI, localPeerId, localStream, videosRootNode, chatMessagesRootNode }: PeersManagerInit) {
     this.socketAPI = socketAPI
     this.localPeerId = localPeerId
     this.localStream = localStream
     this.peerConnections = new Map()
-    this.rootNode = rootNode
+    this.videosRootNode = videosRootNode
+    this.chatMessagesRootNode = chatMessagesRootNode
 
     socketAPI.onConnectedPeers((socketMessage) => this.onConnectedPeers(socketMessage))
     socketAPI.onOffer((socketMessage) => this.onOffer(socketMessage))
@@ -46,13 +49,13 @@ export class PeersManager {
   }
 
   private setPeerConnection (remotePeerId: string, peerConnection: PeerConnection): PeersManager {
-    const video = this.rootNode.appendChild(document.createElement('video'))
+    const video = this.videosRootNode.appendChild(document.createElement('video'))
     video.setAttribute('autoplay', '')
     video.setAttribute('playsinline', '')
     peerConnection.registerVideo(video)
     peerConnection.onClose(() => {
+      this.videosRootNode.removeChild(video)
       peerConnection.unregisterVideo()
-      this.rootNode.removeChild(video)
     })
     this.peerConnections.set(remotePeerId, peerConnection)
     return this
@@ -60,6 +63,13 @@ export class PeersManager {
 
   public closeAllConnections () {
     this.socketAPI.close()
+  }
+
+  public sendChatMessage (message: string) {
+    this.peerConnections.forEach((peerConnection) => {
+      console.debug('PeersManager: sendChatMessage', message, peerConnection, this)
+      peerConnection.peerChatAPI.sendMessage(message)
+    })
   }
 
   // When the local peer arrives on the session, it receives the current remote peers
@@ -76,6 +86,7 @@ export class PeersManager {
           remotePeerId,
           localStream: this.localStream,
           socketAPI: this.socketAPI,
+          chatMessagesRootNode: this.chatMessagesRootNode
         })
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
         this.setPeerConnection(remotePeerId, peerConnection)
@@ -106,7 +117,8 @@ export class PeersManager {
       localPeerId: this.localPeerId,
       remotePeerId: socketMessage.offererId,
       localStream: this.localStream,
-      socketAPI: this.socketAPI
+      socketAPI: this.socketAPI,
+      chatMessagesRootNode: this.chatMessagesRootNode,
     })
     this.setPeerConnection(socketMessage.offererId, peerConnection)
 

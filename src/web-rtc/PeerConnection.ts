@@ -1,4 +1,5 @@
 import { SocketAPI } from '@web-rtc-demo/shared'
+import { PeerChatAPI } from './PeerChatAPI'
 
 const ICE_SERVERS: RTCIceServer[] = [
   // { urls: 'stun:stunserver.org:3478' },
@@ -13,14 +14,16 @@ interface PeerConnectionInit {
   remotePeerId: string;
   localStream: MediaStream;
   socketAPI: SocketAPI;
+  chatMessagesRootNode: HTMLElement;
 }
 // NOTE: A connection involves two peers, the local peer and the remote one.
 export class PeerConnection {
   public connection: RTCPeerConnection
   public localPeerId: string
   public remotePeerId: string
-  private remoteStream: MediaStream | null;
-  private remotePeerVideo: HTMLVideoElement | null;
+  public peerChatAPI: PeerChatAPI
+  private remoteStream: MediaStream | null
+  private remotePeerVideo: HTMLVideoElement | null
   private socketAPI: SocketAPI
 
   constructor (params: PeerConnectionInit) {
@@ -30,6 +33,12 @@ export class PeerConnection {
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
     this.remoteStream = null
     this.remotePeerVideo = null
+    this.peerChatAPI = new PeerChatAPI({
+      dataChannel: this.connection.createDataChannel('chat'),
+      chatMessagesRootNode: params.chatMessagesRootNode,
+      localPeerId: this.localPeerId,
+    })
+    this.onClose(() => this.peerChatAPI.dataChannel.close())
 
     params.localStream.getTracks().map((track) => this.connection.addTrack(track, params.localStream))
     this.registerICECandidatesListener()
