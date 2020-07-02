@@ -150,6 +150,7 @@ export class PeersManager {
 
     // Accept the answer
     peerConnection.connection.setRemoteDescription(socketMessage.description)
+    console.debug('PeersManager: peerConnection.createDataChannel()')
     peerConnection.createChatDataChannel()
   }
 }
