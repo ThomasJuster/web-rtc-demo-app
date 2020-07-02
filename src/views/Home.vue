@@ -41,8 +41,9 @@ export default {
         try {
           const createSessionResult = await serverAPI.createSession(this.sessionName, this.password)
           this.createdSessionSuccessfully = createSessionResult.ok
-          this.sessionUrl = new URL(`/sessions/${this.sessionName}`, window.location.origin)
+          this.sessionUrl = new URL('/', window.location.origin)
           this.sessionUrl.searchParams.set('serverUrl', this.serverUrl)
+          this.sessionUrl.searchParams.set('sessionName', this.sessionName)
           if (this.password) this.sessionUrl.searchParams.set('password', this.password)
         } catch (error) {
           this.unableToReachServer = true

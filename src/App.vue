@@ -1,9 +1,23 @@
+<script>
+import Home from './views/Home.vue'
+import Session from './views/Session.vue'
+
+export default {
+  name: 'App',
+  components: {
+    Home,
+    Session,
+  },
+}
+</script>
+
 <template>
   <div id="app">
     <div id="nav">
       <router-link to="/">Home</router-link>
     </div>
-    <router-view/>
+    <Home v-if="!$route.query.sessionName"></Home>
+    <Session v-if="$route.query.sessionName"></Session>
   </div>
 </template>
 

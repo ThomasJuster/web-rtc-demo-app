@@ -27,13 +27,14 @@ export default {
   }),
 
   async mounted () {
-    const { serverUrl, password } = this.$route.query
+    const { serverUrl, password, sessionName } = this.$route.query
     const serverAPI = new ServerAPI({ url: new URL(serverUrl).origin })
+    if (typeof sessionName !== 'string') throw new Error('sessionName should be a string')
 
     this.joinSessionLoading = true
     console.info('local peer id', this.localPeerId)
     try {
-      const joinSessionResult = await serverAPI.joinSession(this.$route.params.sessionName, password)
+      const joinSessionResult = await serverAPI.joinSession(sessionName, password)
       this.canJoinSession = joinSessionResult.ok
     } catch (error) {
       console.error(error)
