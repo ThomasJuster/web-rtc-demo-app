@@ -50,7 +50,7 @@ export class PeersManager {
   // With that information, the local peer sends an offer to each remote peer
   private onConnectedPeers (socketMessage: SocketMessage): void {
     if (socketMessage.type !== 'connected-peers-id') throw new Error('Invalid connected peers message')
-
+    console.debug('PeersManager: connected-peers-id', socketMessage)
     const promises = socketMessage.peerIds
       .filter((peerId) => peerId !== this.localPeerId)
       .map(async (remotePeerId) => {
