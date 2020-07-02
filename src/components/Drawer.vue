@@ -36,6 +36,7 @@ export default {
 }
 .drawer {
   position: fixed;
+  padding-top: 2em;
   z-index: 1000;
   width: 40em;
   height: 100vh;

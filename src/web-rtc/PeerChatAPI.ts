@@ -40,6 +40,7 @@ export class PeerChatAPI {
 
   public onChatMessage (listener: Listener): PeerChatAPI {
     this.dataChannel.addEventListener('message', (event) => {
+      console.debug('PeerChatAPI: onmessage listener execution')
       const chatDataMessage = parseChatMessage(event)
       if (chatDataMessage.type !== 'chat-message') return
       listener(chatDataMessage)
