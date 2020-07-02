@@ -60,7 +60,7 @@ export default {
   methods: {
     finishInitialSetup () {
       this.isLocalPeerSetupReady = true
-      const { params: { sessionName }, query: { serverUrl } } = this.$route.params
+      const { serverUrl, sessionName } = this.$route.query
       const socketBaseUrl = new URL(serverUrl)
       socketBaseUrl.protocol = window.location.protocol.replace('http', 'ws')
       const url = SOCKET_ROUTE
@@ -70,7 +70,7 @@ export default {
       this.peersManager = new PeersManager({
         socketAPI: new SocketAPI({
           url: new URL(url, socketBaseUrl).href,
-          sessionName: this.$route.params.sessionName,
+          sessionName,
           peerId: this.localPeer,
         }),
         localPeerId: this.localPeerId,
@@ -108,7 +108,7 @@ export default {
 
 <template>
   <main>
-    <h1>{{ `Session ${$route.params.sessionName}` }}</h1>
+    <h1>{{ `Session ${$route.query.sessionName}` }}</h1>
 
     <Modal v-if="!$route.query.serverUrl" fixed open v-on:close="$router.replace('/')">
       <template v-slot:header>
@@ -167,7 +167,7 @@ export default {
     </div>
 
     <div v-else>
-      <h3>Conference {{ $route.params.sessionName }}</h3>
+      <h3>Conference {{ $route.query.sessionName }}</h3>
       <video ref="local-peer-video" playsinline autoplay muted key="local-peer-video"></video>
       <span style="display: inline-block;" v-if="peersManager">
         <video
