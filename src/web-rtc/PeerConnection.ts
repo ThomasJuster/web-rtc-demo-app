@@ -102,8 +102,8 @@ export class PeerConnection {
     // both peers add the ICE candidates of the other peer.
     this.connection.addEventListener('icecandidate', (event) => {
       if (!event.candidate) return
-      console.debug('PeerConnection: emit ICE candidate to', this.remotePeerId, event.candidate)
-      console.debug('PeerConnection: PeerConnection send ICE candidates')
+      // console.debug('PeerConnection: emit ICE candidate to', this.remotePeerId, event.candidate)
+      // console.debug('PeerConnection: PeerConnection send ICE candidates')
       this.socketAPI.send({
         type: 'ice-candidate',
         candidate: event.candidate,
@@ -116,13 +116,13 @@ export class PeerConnection {
     // without ICE candidates, the connection would exist but it’d be useless, it’s ICE candidates that allow exchanging data
     this.socketAPI.onIceCandidate((data) => {
       if (data.type !== 'ice-candidate') return
-      console.debug('PeerConnection:', this.localPeerId, 'receive ice candidate from', data.fromPeerId, data.candidate)
+      // console.debug('PeerConnection:', this.localPeerId, 'receive ice candidate from', data.fromPeerId, data.candidate)
       this.connection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error)
     })
 
-    this.connection.addEventListener('iceconnectionstatechange', (event) => {
-      console.debug('PeerConnection: ice connection state change', event, this.connection.iceConnectionState)
-    })
+    // this.connection.addEventListener('iceconnectionstatechange', (event) => {
+    //   console.debug('PeerConnection: ice connection state change', event, this.connection.iceConnectionState)
+    // })
 
     return this
   }
