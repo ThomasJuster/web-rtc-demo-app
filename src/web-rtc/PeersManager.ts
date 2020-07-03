@@ -1,5 +1,6 @@
 import { SocketAPI, SocketMessage } from '@web-rtc-demo/shared'
 import { PeerConnection } from './PeerConnection'
+import { ChatDataMessage } from './PeerChatAPI'
 
 type PeerId = string
 
@@ -15,28 +16,43 @@ interface PeersManagerInit {
   socketAPI: SocketAPI;
   localPeerId: string;
   localStream: MediaStream;
-  videosRootNode: HTMLElement;
-  chatMessagesRootNode: HTMLElement;
 }
-export class PeersManager {
+export class PeersManager extends EventTarget {
   public peerConnections: Map<PeerId, PeerConnection>
   private localPeerId: string
   private localStream: MediaStream
   private socketAPI: SocketAPI
-  private videosRootNode: HTMLElement
-  private chatMessagesRootNode: HTMLElement
+  private chatMessages: ChatDataMessage[]
 
-  constructor ({ socketAPI, localPeerId, localStream, videosRootNode, chatMessagesRootNode }: PeersManagerInit) {
+  constructor ({ socketAPI, localPeerId, localStream }: PeersManagerInit) {
+    super()
     this.socketAPI = socketAPI
     this.localPeerId = localPeerId
     this.localStream = localStream
     this.peerConnections = new Map()
-    this.videosRootNode = videosRootNode
-    this.chatMessagesRootNode = chatMessagesRootNode
+    this.chatMessages = []
 
-    socketAPI.onConnectedPeers((socketMessage) => this.onConnectedPeers(socketMessage))
-    socketAPI.onOffer((socketMessage) => this.onOffer(socketMessage))
-    socketAPI.onAnswer((socketMessage) => this.onAnswer(socketMessage))
+    socketAPI.onConnectedPeers((socketMessage) => this.sendOfferToConnectedPeers(socketMessage))
+    socketAPI.onOffer((socketMessage) => this.answerToReceivedOffer(socketMessage))
+    socketAPI.onAnswer((socketMessage) => this.acceptReceivedAnswer(socketMessage))
+    this.sendChatMessage = this.sendChatMessage.bind(this)
+    this.closeAllConnections = this.closeAllConnections.bind(this)
+  }
+
+  public closeAllConnections () {
+    this.socketAPI.close()
+  }
+
+  public sendChatMessage (message: string) {
+    console.info('peer connections', this.peerConnections)
+    this.peerConnections.forEach((peerConnection) => {
+      console.debug('PeersManager: sendChatMessage', message, peerConnection, this)
+      if (!peerConnection.peerChatAPI) {
+        window.alert('He-hem, wait a bit')
+      } else {
+        peerConnection.peerChatAPI.sendChatMessage(message)
+      }
+    })
   }
 
   private getPeerConnection (remotePeerId: string): PeerConnection {
@@ -48,37 +64,29 @@ export class PeersManager {
     return peerConnection
   }
 
-  private setPeerConnection (remotePeerId: string, peerConnection: PeerConnection): PeersManager {
-    const video = this.videosRootNode.appendChild(document.createElement('video'))
-    video.setAttribute('autoplay', '')
-    video.setAttribute('playsinline', '')
-    peerConnection.registerVideo(video)
-    peerConnection.onClose(() => {
-      this.videosRootNode.removeChild(video)
-      peerConnection.unregisterVideo()
+  private dispatchPeerConnectionEvent (peerConnection: PeerConnection): void {
+    this.dispatchEvent(new CustomEvent('peerconnection', { detail: peerConnection }))
+  }
+
+  private dispatchChatMessageEvent (message: ChatDataMessage): void {
+    this.chatMessages = [...this.chatMessages, message]
+    this.dispatchEvent(new CustomEvent('chatmessage', { detail: this.chatMessages }))
+  }
+
+  private setPeerConnection (remotePeerId: string, peerConnection: PeerConnection): void {
+    peerConnection.addEventListener('chatapiopen', (event) => {
+      const peerChatAPI = event.detail
+      const forwardChatMessage = (event: CustomEvent<ChatDataMessage>) => this.dispatchChatMessageEvent(event.detail)
+      peerChatAPI.addEventListener('chatmessage', forwardChatMessage)
+      peerChatAPI.dataChannel.addEventListener('close', () => peerChatAPI.removeEventListener('chatmessage', forwardChatMessage))
     })
     this.peerConnections.set(remotePeerId, peerConnection)
-    return this
-  }
-
-  public closeAllConnections () {
-    this.socketAPI.close()
-  }
-
-  public sendChatMessage (message: string) {
-    this.peerConnections.forEach((peerConnection) => {
-      console.debug('PeersManager: sendChatMessage', message, peerConnection, this)
-      if (!peerConnection.peerChatAPI) {
-        window.alert('He-hem, wait a bit')
-      } else {
-        peerConnection.peerChatAPI.sendMessage(message)
-      }
-    })
+    this.dispatchPeerConnectionEvent(peerConnection)
   }
 
   // When the local peer arrives on the session, it receives the current remote peers
   // With that information, the local peer sends an offer to each remote peer
-  private onConnectedPeers (socketMessage: SocketMessage): void {
+  private sendOfferToConnectedPeers (socketMessage: SocketMessage): void {
     if (socketMessage.type !== 'connected-peers-id') throw new Error('Invalid connected peers message')
     console.debug('PeersManager: connected-peers-id', socketMessage, this)
     const promises = socketMessage.peerIds
@@ -90,7 +98,6 @@ export class PeersManager {
           remotePeerId,
           localStream: this.localStream,
           socketAPI: this.socketAPI,
-          chatMessagesRootNode: this.chatMessagesRootNode
         })
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
         this.setPeerConnection(remotePeerId, peerConnection)
@@ -115,7 +122,7 @@ export class PeersManager {
   }
 
   // When receiving an offer, the local peer should accept the offer by sending an answer back to the remote peer
-  private async onOffer (socketMessage: SocketMessage): Promise<void> {
+  private async answerToReceivedOffer (socketMessage: SocketMessage): Promise<void> {
     if (socketMessage.type !== 'offer') throw new Error('Invalid offer socket message')
 
     console.debug('PeersManager: received offer', socketMessage, this.peerConnections, this)
@@ -125,7 +132,6 @@ export class PeersManager {
       remotePeerId: socketMessage.offererId,
       localStream: this.localStream,
       socketAPI: this.socketAPI,
-      chatMessagesRootNode: this.chatMessagesRootNode,
     })
     this.setPeerConnection(socketMessage.offererId, peerConnection)
 
@@ -152,7 +158,7 @@ export class PeersManager {
   }
 
   // when receiving an answer, the local peer should accept the remote peer’s and notify the remote peer s⋅he did accept the answer
-  private onAnswer (socketMessage: SocketMessage): void {
+  private acceptReceivedAnswer (socketMessage: SocketMessage): void {
     if (socketMessage.type !== 'answer') throw new Error('Invalid answer socket message')
 
     console.debug('PeersManager: received answer', socketMessage, this.peerConnections, this)
@@ -160,7 +166,17 @@ export class PeersManager {
 
     // Accept the answer
     peerConnection.connection.setRemoteDescription(socketMessage.description)
-    // console.debug('PeersManager: peerConnection.createDataChannel()')
-    // peerConnection.createChatDataChannel()
   }
+}
+
+export interface PeersManager extends EventTarget {
+  addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
+  addEventListener (type: 'peerconnection', listener: Listener<CustomEvent<PeerConnection>>): void;
+  addEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage[]>>): void;
+  removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;
+  removeEventListener (type: 'peerconnection', listener: Listener<CustomEvent<PeerConnection>>): void;
+  removeEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage[]>>): void;
+  dispatchEvent (event: Event): boolean;
+  dispatchEvent (event: CustomEvent<PeerConnection>): void;
+  dispatchEvent (event: CustomEvent<ChatDataMessage[]>): void;
 }

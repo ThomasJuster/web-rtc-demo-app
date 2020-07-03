@@ -1,5 +1,5 @@
-type ChatDataMessage =
-  | { type: 'chat-message'; author: string; content: string }
+export type ChatDataMessage =
+  | { type: 'chat-message'; author: string; message: string }
 
 function parseChatMessage (event: MessageEvent): ChatDataMessage {
   const chatDataMessage = JSON.parse(event.data.toString('utf-8')) as ChatDataMessage
@@ -11,62 +11,52 @@ function parseChatMessage (event: MessageEvent): ChatDataMessage {
   }
 }
 
-type Listener = (chatDataMessage: ChatDataMessage) => unknown
-
 interface PeerChatAPIInit {
   dataChannel: RTCDataChannel;
   localPeerId: string;
-  chatMessagesRootNode: HTMLElement;
 }
 
-export class PeerChatAPI {
+export class PeerChatAPI extends EventTarget {
   public dataChannel: RTCDataChannel
   private localPeerId: string
-  private chatMessagesRootNode: HTMLElement
 
-  constructor ({ dataChannel, localPeerId, chatMessagesRootNode }: PeerChatAPIInit) {
+  constructor ({ dataChannel, localPeerId }: PeerChatAPIInit) {
+    super()
     this.dataChannel = dataChannel
     this.localPeerId = localPeerId
-    this.chatMessagesRootNode = chatMessagesRootNode
 
     dataChannel.addEventListener('open', () => console.debug('data channel opened', localPeerId))
     dataChannel.addEventListener('close', () => console.debug('data channel closed', localPeerId))
     dataChannel.addEventListener('error', (event) => console.error(event.error))
-    this.onChatMessage((chatDataMessage) => {
-      console.debug('PeerChatAPI: received chat message', chatDataMessage, this)
-      this.appendMessageNode(chatDataMessage.content, chatDataMessage.author)
-    })
-  }
-
-  public onChatMessage (listener: Listener): PeerChatAPI {
-    this.dataChannel.addEventListener('message', (event) => {
-      console.debug('PeerChatAPI: onmessage listener execution')
+    dataChannel.addEventListener('message', (event) => {
       const chatDataMessage = parseChatMessage(event)
-      if (chatDataMessage.type !== 'chat-message') return
-      listener(chatDataMessage)
+      console.debug('PeerChatAPI: received chat message', chatDataMessage, this)
+      this.dispatchChatMessageEvent(chatDataMessage)
     })
-    return this
   }
 
-  public sendMessage (message: string): PeerChatAPI {
+  public sendChatMessage (message: string): PeerChatAPI {
     const chatDataMessage: ChatDataMessage = {
       type: 'chat-message',
       author: this.localPeerId,
-      content: message,
+      message,
     }
     console.debug('PeerChatAPI: sendMessage', chatDataMessage, this)
     this.dataChannel.send(JSON.stringify(chatDataMessage))
-    this.appendMessageNode(message, this.localPeerId)
+    this.dispatchChatMessageEvent(chatDataMessage)
     return this
   }
 
-  private appendMessageNode (message: string, author: string) {
-    const divBubble = this.chatMessagesRootNode.appendChild(document.createElement('div'))
-    divBubble.className = 'bubble ' + (author === this.localPeerId ? 'local-peer' : 'remote-peer')
-    const divAuthor = divBubble.appendChild(document.createElement('div'))
-    divAuthor.className = 'author'
-    divAuthor.textContent = author
-    const divMessage = divBubble.appendChild(document.createElement('div'))
-    divMessage.textContent = message
+  private dispatchChatMessageEvent (chatDataMessage: ChatDataMessage) {
+    this.dispatchEvent(new CustomEvent('chatmessage', { detail: chatDataMessage }))
   }
+}
+
+export interface PeerChatAPI extends EventTarget {
+  addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
+  addEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage>>): void;
+  removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;
+  removeEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage>>): void;
+  dispatchEvent (event: Event): boolean;
+  dispatchEvent (event: CustomEvent<ChatDataMessage>): void;
 }

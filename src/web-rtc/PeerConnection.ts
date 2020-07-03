@@ -7,77 +7,54 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'turn:137.74.113.202:3478', username: 'azfne', credential: 'oegiojre' },
 ]
 
-type PeerConnectionListener = (event: Event) => unknown
-
 interface PeerConnectionInit {
   localPeerId: string;
   remotePeerId: string;
   localStream: MediaStream;
   socketAPI: SocketAPI;
-  chatMessagesRootNode: HTMLElement;
 }
+
 // NOTE: A connection involves two peers, the local peer and the remote one.
-export class PeerConnection {
+export class PeerConnection extends EventTarget {
   public connection: RTCPeerConnection
   public localPeerId: string
   public remotePeerId: string
   public peerChatAPI: PeerChatAPI | null
-  private remoteStream: MediaStream | null
-  private remotePeerVideo: HTMLVideoElement | null
-  private chatMessagesRootNode: HTMLElement
   private socketAPI: SocketAPI
 
   constructor (params: PeerConnectionInit) {
+    super()
     this.localPeerId = params.localPeerId
     this.remotePeerId = params.remotePeerId
     this.socketAPI = params.socketAPI
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
-    this.remoteStream = null
-    this.remotePeerVideo = null
     this.peerChatAPI = null
-    this.chatMessagesRootNode = params.chatMessagesRootNode
 
     params.localStream.getTracks().map((track) => this.connection.addTrack(track, params.localStream))
     this.registerICECandidatesListener()
 
     this.connection.addEventListener('track', (event) => {
-      [this.remoteStream] = event.streams
       console.debug('PeerConnection: received remote stream')
-      if (this.remotePeerVideo) this.remotePeerVideo.srcObject = this.remoteStream
+      this.dispatchRemoteStreamEvent(event.streams[0])
     })
 
     this.connection.addEventListener('datachannel', (event) => {
       console.debug('PeerConnection: received datachannel')
       this.setChatDataChannel(event.channel)
     })
-  }
 
-  public onClose (listener: PeerConnectionListener): PeerConnection {
     this.connection.addEventListener('connectionstatechange', (event) => {
       console.debug('PeerConnection: connection state change', event, 'connection state:', this.connection.connectionState)
       switch (this.connection.connectionState) {
         case 'closed':
         case 'disconnected':
         case 'failed':
-          listener(event)
+          this.dispatchConnectionCloseEvent()
           break
         default:
           break
       }
     })
-    return this
-  }
-
-  public registerVideo (video: HTMLVideoElement): PeerConnection {
-    this.remotePeerVideo = video
-    console.debug('PeerConnection: registerVideo()')
-    if (this.remoteStream) this.remotePeerVideo.srcObject = this.remoteStream
-    return this
-  }
-
-  public unregisterVideo (): PeerConnection {
-    this.remotePeerVideo = null
-    return this
   }
 
   public createChatDataChannel () {
@@ -88,15 +65,27 @@ export class PeerConnection {
   public setChatDataChannel (dataChannel: RTCDataChannel) {
     this.peerChatAPI = new PeerChatAPI({
       dataChannel,
-      chatMessagesRootNode: this.chatMessagesRootNode,
       localPeerId: this.localPeerId
     })
-    this.onClose(() => {
+    this.dispatchChatApiOpen(this.peerChatAPI)
+    this.addEventListener('connectionclose', () => {
       if (this.peerChatAPI) this.peerChatAPI.dataChannel.close()
     })
   }
 
-  private registerICECandidatesListener (): PeerConnection {
+  private dispatchChatApiOpen (peerChatAPI: PeerChatAPI): void {
+    this.dispatchEvent(new CustomEvent('chatapiopen', { detail: peerChatAPI }))
+  }
+
+  private dispatchConnectionCloseEvent (): void {
+    this.dispatchEvent(new Event('connectionclose'))
+  }
+
+  private dispatchRemoteStreamEvent (stream: MediaStream): void {
+    this.dispatchEvent(new CustomEvent('remotestream', { detail: stream }))
+  }
+
+  private registerICECandidatesListener (): void {
     // NOTE: the icecandidate event is trigger AFTER creating an offer/answer.
     // As soon as we have the local peer’s ice candidates, we send them to the remote peer so that
     // both peers add the ICE candidates of the other peer.
@@ -123,7 +112,19 @@ export class PeerConnection {
     // this.connection.addEventListener('iceconnectionstatechange', (event) => {
     //   console.debug('PeerConnection: ice connection state change', event, this.connection.iceConnectionState)
     // })
-
-    return this
   }
+}
+
+export interface PeerConnection extends EventTarget {
+  addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
+  addEventListener (type: 'remotestream', listener: Listener<CustomEvent<MediaStream>>): void;
+  addEventListener (type: 'connectionclose', listener: Listener<Event>): void;
+  addEventListener (type: 'chatapiopen', listener: Listener<CustomEvent<PeerChatAPI>>): void;
+  removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;
+  removeEventListener (type: 'remotestream', listener: Listener): void;
+  removeEventListener (type: 'connectionclose', listener: Listener): void;
+  removeEventListener (type: 'chatapiopen', listener: Listener): void;
+  dispatchEvent (event: Event): boolean;
+  dispatchEvent (event: CustomEvent<MediaStream>): void;
+  dispatchEvent (event: CustomEvent<PeerChatAPI>): void;
 }
