@@ -92,6 +92,7 @@ export default {
     <Drawer position="left" :open="isChatDrawerOpened" v-on:close="isChatDrawerOpened = false">
       <div class="chat-messages">
         <div v-for="(data, index) of messages" :key="index" class="bubble" :class="data.author === localPeerId ? 'local-peer' : 'remote-peer'">
+          {{ console.info('v-for', { index, data }) }}
           <div class="author">{{ data.author }}</div>
           <div>{{ data.message }}</div>
         </div>
