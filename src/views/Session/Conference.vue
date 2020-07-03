@@ -31,7 +31,10 @@ export default {
     onPeerConnection (peerConnection) {
       this.peers.push(peerConnection.remotePeerId)
       let remoteStream = null // as long as the HTML video is not defined, we store the remoteStream in that variable
-      const setRemoteStream = (event) => { remoteStream = event.detail }
+      const setRemoteStream = (event) => {
+        console.info('Conference: set local remote stream')
+        remoteStream = event.detail
+      }
       peerConnection.addEventListener('remotestream', setRemoteStream)
 
       this.$nextTick(() => {
@@ -39,6 +42,7 @@ export default {
         const video = this.$refs[`video-${peerConnection.remotePeerId}`]
         video.srcObject = remoteStream
         peerConnection.addEventListener('remotestream', (event) => {
+          console.info('Conference: on remote stream', event)
           video.srcObject = event.detail
         })
       })
