@@ -82,7 +82,7 @@ export class PeerConnection {
 
   public createChatDataChannel () {
     console.debug('PeerConnection: create and share datachannel')
-    this.setChatDataChannel(this.connection.createDataChannel('chat'))
+    this.setChatDataChannel(this.connection.createDataChannel('chat', { priority: 'high' }))
   }
 
   public setChatDataChannel (dataChannel: RTCDataChannel) {
