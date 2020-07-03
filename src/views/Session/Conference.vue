@@ -39,7 +39,7 @@ export default {
 
       this.$nextTick(() => {
         peerConnection.removeEventListener('remotestream', setRemoteStream)
-        const video = this.$refs[`video-${peerConnection.remotePeerId}`]
+        const video = document.getElementById(`video-${peerConnection.remotePeerId}`)
         video.srcObject = remoteStream
         peerConnection.addEventListener('remotestream', (event) => {
           console.info('Conference: on remote stream', event, this.$refs, video, `video-${peerConnection.remotePeerId}`)
@@ -120,8 +120,8 @@ export default {
         <button type="submit">{{ 'Send 👻' }}</button>
       </form>
     </Drawer>
-    <video ref="local-peer-video" playsinline="" autoplay="" muted=""></video>
-    <video v-for="peer in peers" :key="peer" :ref="`video-${peer}`" playsinline="" autoplay=""></video>
+    <video ref="local-peer-video" :playsinline="''" :autoplay="''" :muted="''"></video>
+    <video v-for="peer in peers" :key="peer" :id="`video-${peer}`" :playsinline="''" :autoplay="''"></video>
     <template v-for="peer in peers">
       {{ console.info('v-for peer', { peer }) }}
     </template>
