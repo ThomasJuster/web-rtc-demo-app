@@ -86,17 +86,20 @@ export default {
 
 <template>
   <div>
-    <h3>{{ `Conference ${$route.query.sessionName} − ${ localPeerId}` }}</h3>
+    <h3>{{ `Conference ${$route.query.sessionName} − ${localPeerId}` }}</h3>
     <p>
       <button v-on:click="isChatDrawerOpened = true">{{ 'Open chat' }}</button>
     </p>
     <Drawer position="left" :open="isChatDrawerOpened" v-on:close="isChatDrawerOpened = false">
       <div class="chat-messages">
-        <div v-for="(data, index) in messages" :key="index" class="bubble" :class="data.author === localPeerId ? 'local-peer' : 'remote-peer'">
-          {{ console.info('v-for', { index, data }) }}
-          <div class="author">{{ data.author }}</div>
-          <div>{{ data.message }}</div>
-        </div>
+        {{ console.info('before v-for', { messages }) }}
+        <template v-for="(data, index) in messages">
+          <div :key="index" class="bubble" :class="data.author === localPeerId ? 'local-peer' : 'remote-peer'">
+            {{ console.info('v-for messages', { index, data }) }}
+            <div class="author">{{ data.author }}</div>
+            <div>{{ data.message }}</div>
+          </div>
+        </template>
       </div>
       <form class="chat-form" v-on:submit.prevent="submitChatMessage">
         <input name="message" v-model="chatMessage" placeholder="Type something…" required>
@@ -105,6 +108,9 @@ export default {
     </Drawer>
     <video ref="local-peer-video" playsinline autoplay muted></video>
     <video v-for="peer in peers" :key="peer" :ref="`video-${peer}`" playsinline autoplay></video>
+    <template v-for="peer in peers">
+      {{ console.info('v-for peer', { peer }) }}
+    </template>
   </div>
 </template>
 
