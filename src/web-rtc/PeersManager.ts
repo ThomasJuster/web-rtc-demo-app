@@ -22,7 +22,6 @@ export class PeersManager extends EventTarget {
   private localPeerId: string
   private localStream: MediaStream
   private socketAPI: SocketAPI
-  private chatMessages: ChatDataMessage[]
 
   constructor ({ socketAPI, localPeerId, localStream }: PeersManagerInit) {
     super()
@@ -30,7 +29,6 @@ export class PeersManager extends EventTarget {
     this.localPeerId = localPeerId
     this.localStream = localStream
     this.peerConnections = new Map()
-    this.chatMessages = []
 
     socketAPI.onConnectedPeers((socketMessage) => this.sendOfferToConnectedPeers(socketMessage))
     socketAPI.onOffer((socketMessage) => this.answerToReceivedOffer(socketMessage))
@@ -69,8 +67,7 @@ export class PeersManager extends EventTarget {
   }
 
   private dispatchChatMessageEvent (message: ChatDataMessage): void {
-    this.chatMessages = [...this.chatMessages, message]
-    this.dispatchEvent(new CustomEvent('chatmessage', { detail: this.chatMessages }))
+    this.dispatchEvent(new CustomEvent('chatmessage', { detail: message }))
   }
 
   private setPeerConnection (remotePeerId: string, peerConnection: PeerConnection): void {
@@ -172,10 +169,10 @@ export class PeersManager extends EventTarget {
 export interface PeersManager extends EventTarget {
   addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
   addEventListener (type: 'peerconnection', listener: Listener<CustomEvent<PeerConnection>>): void;
-  addEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage[]>>): void;
+  addEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage>>): void;
   removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;
   removeEventListener (type: 'peerconnection', listener: Listener<CustomEvent<PeerConnection>>): void;
-  removeEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage[]>>): void;
+  removeEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage>>): void;
   dispatchEvent (event: Event): boolean;
   dispatchEvent (event: CustomEvent<PeerConnection>): void;
   dispatchEvent (event: CustomEvent<ChatDataMessage[]>): void;

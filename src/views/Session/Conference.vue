@@ -30,11 +30,16 @@ export default {
 
     onPeerConnection (peerConnection) {
       this.peers.push(peerConnection.remotePeerId)
-      // on next tick, the video is appended to the DOM, so its $ref is accessible
+      let remoteStream = null // as long as the HTML video is not defined, we store the remoteStream in that variable
+      const setRemoteStream = (event) => { remoteStream = event.detail }
+      peerConnection.addEventListener('remotestream', setRemoteStream)
+
       this.$nextTick(() => {
+        peerConnection.removeEventListener('remotestream', setRemoteStream)
+        const video = this.$refs[`video-${peerConnection.remotePeerId}`]
+        video.srcObject = remoteStream
         peerConnection.addEventListener('remotestream', (event) => {
-          const remoteStream = event.detail
-          this.$refs[`video-${peerConnection.remotePeerId}`].srcObject = remoteStream
+          video.srcObject = event.detail
         })
       })
     },
@@ -106,8 +111,8 @@ export default {
         <button type="submit">{{ 'Send 👻' }}</button>
       </form>
     </Drawer>
-    <video ref="local-peer-video" playsinline autoplay muted></video>
-    <video v-for="peer in peers" :key="peer" :ref="`video-${peer}`" playsinline autoplay></video>
+    <video ref="local-peer-video" playsinline="" autoplay="" muted=""></video>
+    <video v-for="peer in peers" :key="peer" :ref="`video-${peer}`" playsinline="" autoplay=""></video>
     <template v-for="peer in peers">
       {{ console.info('v-for peer', { peer }) }}
     </template>
