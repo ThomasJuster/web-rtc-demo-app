@@ -95,6 +95,9 @@ export class PeersManager {
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
         this.setPeerConnection(remotePeerId, peerConnection)
 
+        console.debug('PeersManager: before offer, create chat data channel')
+        peerConnection.createChatDataChannel()
+
         // Create an offer
         const offer = await peerConnection.connection.createOffer(RTC_OFFER_OPTIONS)
         await peerConnection.connection.setLocalDescription(offer)
@@ -131,6 +134,13 @@ export class PeersManager {
     const answer = await peerConnection.connection.createAnswer(RTC_OFFER_OPTIONS)
     await peerConnection.connection.setLocalDescription(answer)
 
+    console.debug('PeersManager: before answer, add listener on "datachannel"')
+    peerConnection.connection.addEventListener('datachannel', (event) => {
+      console.debug('PeersManager: "datachannel" event triggered', event, this)
+      if (event.channel.label !== 'chat') return
+      peerConnection.setChatDataChannel(event.channel)
+    })
+
     console.debug('PeersManager: send answer', this)
     // send the answer to the remote peer
     this.socketAPI.send({
@@ -150,7 +160,7 @@ export class PeersManager {
 
     // Accept the answer
     peerConnection.connection.setRemoteDescription(socketMessage.description)
-    console.debug('PeersManager: peerConnection.createDataChannel()')
-    peerConnection.createChatDataChannel()
+    // console.debug('PeersManager: peerConnection.createDataChannel()')
+    // peerConnection.createChatDataChannel()
   }
 }

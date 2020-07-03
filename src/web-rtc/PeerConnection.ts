@@ -85,7 +85,7 @@ export class PeerConnection {
     this.setChatDataChannel(this.connection.createDataChannel('chat'))
   }
 
-  private setChatDataChannel (dataChannel: RTCDataChannel) {
+  public setChatDataChannel (dataChannel: RTCDataChannel) {
     this.peerChatAPI = new PeerChatAPI({
       dataChannel,
       chatMessagesRootNode: this.chatMessagesRootNode,
