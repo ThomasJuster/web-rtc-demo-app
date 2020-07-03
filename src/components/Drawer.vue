@@ -38,7 +38,7 @@ export default {
   position: fixed;
   padding-top: 2em;
   z-index: 1000;
-  width: 40em;
+  width: 90%;
   height: calc(100vh - 2em);
   max-height: calc(100vh - 2em);
   overflow-y: auto;
@@ -47,6 +47,11 @@ export default {
   transition: transform 0.3s ease;
   box-shadow: 0 0 10px -2px #333;
   background: white;
+}
+@media (min-width: 45em) {
+  .drawer {
+    width: 40em;
+  }
 }
 .drawer-left {
   left: 0;

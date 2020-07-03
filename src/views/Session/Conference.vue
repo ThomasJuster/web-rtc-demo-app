@@ -47,6 +47,11 @@ export default {
     onChatMessage (chatDataMessage) {
       this.messages.push(chatDataMessage)
     },
+
+    openDrawer () {
+      this.isChatDrawerOpened = true
+      this.$refs['chat-input'].focus()
+    },
   },
 
   async mounted () {
@@ -93,7 +98,7 @@ export default {
   <div>
     <h3>{{ `Conference ${$route.query.sessionName} − ${localPeerId}` }}</h3>
     <p>
-      <button v-on:click="isChatDrawerOpened = true">{{ 'Open chat' }}</button>
+      <button v-on:click="openDrawer">{{ 'Open chat' }}</button>
     </p>
     <Drawer position="left" :open="isChatDrawerOpened" v-on:close="isChatDrawerOpened = false">
       <div class="chat-messages">
@@ -107,7 +112,7 @@ export default {
         </template>
       </div>
       <form class="chat-form" v-on:submit.prevent="submitChatMessage">
-        <input name="message" v-model="chatMessage" placeholder="Type something…" required>
+        <input name="message" ref="chat-input" v-model="chatMessage" placeholder="Type something…" required>
         <button type="submit">{{ 'Send 👻' }}</button>
       </form>
     </Drawer>
