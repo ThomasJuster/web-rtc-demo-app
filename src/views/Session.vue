@@ -202,6 +202,7 @@ video {
   border-radius: 3px;
   color: white;
   max-width: 70%;
+  margin: 1em 0;
 }
 .bubble.local-peer {
   background: cadetblue;
