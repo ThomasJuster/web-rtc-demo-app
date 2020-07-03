@@ -42,7 +42,7 @@ export default {
         const video = this.$refs[`video-${peerConnection.remotePeerId}`]
         video.srcObject = remoteStream
         peerConnection.addEventListener('remotestream', (event) => {
-          console.info('Conference: on remote stream', event)
+          console.info('Conference: on remote stream', event, this.$refs, video, `video-${peerConnection.remotePeerId}`)
           video.srcObject = event.detail
         })
       })
