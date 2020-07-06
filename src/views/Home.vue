@@ -2,7 +2,7 @@
 // @ is an alias to /src
 // import HelloWorld from '@/components/HelloWorld.vue'
 import Modal from '../components/Modal.vue'
-import { ServerAPI } from '@web-rtc-demo/shared'
+import { ServerApi } from '@web-rtc-demo/shared'
 
 export default {
   name: 'Home',
@@ -13,7 +13,7 @@ export default {
     sessionName: '',
     sessionWithPassword: false,
     password: '',
-    serverUrl: '',
+    serverUrl: window.location.origin.includes('localhost') ? 'http://localhost:43210/' : 'https://njcyp.sse.codesandbox.io/',
 
     sessionUrl: undefined,
 
@@ -26,10 +26,10 @@ export default {
   }),
   methods: {
     async submit () {
-      const serverAPI = new ServerAPI({ url: new URL(this.serverUrl).origin })
+      const serverApi = new ServerApi({ baseUrl: this.serverUrl })
       this.sessionExistsLoading = true
       try {
-        const sessionExistsResult = await serverAPI.sessionExists(this.sessionName)
+        const sessionExistsResult = await serverApi.sessionExists(this.sessionName)
         this.sessionExists = sessionExistsResult.ok
       } catch (error) {
         this.unableToReachServer = true
@@ -39,7 +39,7 @@ export default {
       if (!this.unableToReachServer && !this.sessionExists) {
         this.createSessionLoading = true
         try {
-          const createSessionResult = await serverAPI.createSession(this.sessionName, this.password)
+          const createSessionResult = await serverApi.createSession(this.sessionName, this.password)
           this.createdSessionSuccessfully = createSessionResult.ok
           this.sessionUrl = new URL('/', window.location.origin)
           this.sessionUrl.searchParams.set('serverUrl', this.serverUrl)
@@ -143,7 +143,7 @@ export default {
         </template>
         <p v-if="sessionUrl">
           Copy the following link to share with your friends:
-          <input type="text" :value="sessionUrl.href">
+          <input type="text" :value="`${sessionUrl.origin}/web-rtc-demo-app/dist${sessionUrl.pathname}${sessionUrl.search}${sessionUrl.hash}`">
         </p>
         <template v-slot:footer v-if="sessionUrl">
           <button v-on:click="$router.push(sessionUrl.href.replace(sessionUrl.origin, ''))">Let’s go !</button>
