@@ -41,11 +41,11 @@ export class PeersManager extends EventTarget {
     })
   }
 
-  public closeAllConnections () {
+  public closeAllConnections (): void {
     this.socketApi.close()
   }
 
-  public sendChatMessage (message: string) {
+  public sendChatMessage (message: string): void {
     console.info('peer connections', this.peerConnections)
     this.peerConnections.forEach((peerConnection) => {
       console.debug('PeersManager: sendChatMessage', message, peerConnection, this)

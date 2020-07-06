@@ -1,6 +1,4 @@
 <script>
-// @ is an alias to /src
-// import HelloWorld from '@/components/HelloWorld.vue'
 import Modal from '../components/Modal.vue'
 import { ServerApi } from '@web-rtc-demo/shared'
 

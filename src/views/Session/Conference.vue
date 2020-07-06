@@ -56,6 +56,18 @@ export default {
       this.isChatDrawerOpened = true
       this.$refs['chat-input'].focus()
     },
+
+    async shareScreen () {
+      const stream = await window.navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+      const localPeerVideo = this.$refs['local-peer-video']
+      localPeerVideo.srcObject = stream
+      this.peersManager.setLocalStream(stream)
+      localPeerVideo.addEventListener('suspend', () => {
+        // it means the local peer has stopped sharing his/her screen
+        localPeerVideo.srcObject = this.localStream
+        this.peersManager.setLocalStream(this.localStream)
+      })
+    },
   },
 
   async mounted () {
@@ -101,6 +113,10 @@ export default {
     <p>
       <button v-on:click="openDrawer">{{ 'Open chat' }}</button>
     </p>
+    <p>
+      <button v-on:click="shareScreen">{{ 'Share your screen' }}</button>
+    </p>
+
     <Drawer position="left" :open="isChatDrawerOpened" v-on:close="isChatDrawerOpened = false">
       <div class="chat-messages">
         {{ console.info('before v-for', { messages }) }}
