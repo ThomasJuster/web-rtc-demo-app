@@ -36,9 +36,10 @@ export class PeersManager extends EventTarget {
   }
 
   public setLocalStream (stream: MediaStream): void {
-    this.peerConnections.forEach((peerConnection) => {
-      peerConnection.setLocalStream(stream)
-    })
+    // this.peerConnections.forEach((peerConnection) => {
+    //   peerConnection.setLocalStream(stream)
+    // })
+    this.localStream = stream
     this.sendOfferToConnectedPeers(Array.from(this.peerConnections.keys()))
   }
 
