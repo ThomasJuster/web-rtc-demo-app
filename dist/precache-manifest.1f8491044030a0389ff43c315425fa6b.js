@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "096ed4462818fd34c7d4",
+    "revision": "7c9282796e6ec58bb2d2",
     "url": "/web-rtc-demo-app/dist/css/app.1e730339.css"
   },
   {
@@ -8,12 +8,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/web-rtc-demo-app/dist/img/logo.82b9c7a5.png"
   },
   {
-    "revision": "e71f6d26fdff808f730e15a1684c5e37",
+    "revision": "37efce1efe2cc8352d933d21f1e2fffc",
     "url": "/web-rtc-demo-app/dist/index.html"
   },
   {
-    "revision": "096ed4462818fd34c7d4",
-    "url": "/web-rtc-demo-app/dist/js/app.95928e5f.js"
+    "revision": "7c9282796e6ec58bb2d2",
+    "url": "/web-rtc-demo-app/dist/js/app.9736b24a.js"
   },
   {
     "revision": "c43ec961130b01d06694",

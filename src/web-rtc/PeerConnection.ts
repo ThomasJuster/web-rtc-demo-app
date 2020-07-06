@@ -58,7 +58,8 @@ export class PeerConnection extends EventTarget {
   }
 
   public setLocalStream (stream: MediaStream): void {
-    stream.getTracks().map((track) => this.connection.addTrack(track, stream))
+    this.connection.getSenders().forEach((sender) => this.connection.removeTrack(sender))
+    stream.getTracks().forEach((track) => this.connection.addTrack(track, stream))
   }
 
   public createChatDataChannel () {
