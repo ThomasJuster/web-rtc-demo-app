@@ -1,4 +1,4 @@
-import { SocketApi, SocketMessage } from '@web-rtc-demo/shared'
+import { SocketApi, SocketMessage, SocketMessageConnectedPeersId } from '@web-rtc-demo/shared'
 import { PeerConnection } from './PeerConnection'
 import { ChatDataMessage } from './PeerChatAPI'
 
@@ -30,7 +30,7 @@ export class PeersManager extends EventTarget {
     this.localStream = localStream
     this.peerConnections = new Map()
 
-    socketApi.onConnectedPeersId((socketMessage) => this.sendOfferToConnectedPeers(socketMessage))
+    socketApi.onConnectedPeersId((socketMessage) => this.sendOfferToConnectedPeers(socketMessage.peerIds))
     socketApi.onOffer((socketMessage) => this.answerToReceivedOffer(socketMessage))
     socketApi.onAnswer((socketMessage) => this.acceptReceivedAnswer(socketMessage))
   }
@@ -39,6 +39,7 @@ export class PeersManager extends EventTarget {
     this.peerConnections.forEach((peerConnection) => {
       peerConnection.setLocalStream(stream)
     })
+    this.sendOfferToConnectedPeers(Array.from(this.peerConnections.keys()))
   }
 
   public closeAllConnections (): void {
@@ -87,10 +88,9 @@ export class PeersManager extends EventTarget {
 
   // When the local peer arrives on the session, it receives the current remote peers
   // With that information, the local peer sends an offer to each remote peer
-  private sendOfferToConnectedPeers (socketMessage: SocketMessage): void {
-    if (socketMessage.type !== 'connected-peers-id') throw new Error('Invalid connected peers message')
-    console.debug('PeersManager: connected-peers-id', socketMessage, this)
-    const promises = socketMessage.peerIds
+  private sendOfferToConnectedPeers (peerIds: SocketMessageConnectedPeersId['peerIds']): void {
+    console.debug('PeersManager: connected-peers-id', peerIds, this)
+    const promises = peerIds
       .filter((peerId) => peerId !== this.localPeerId)
       .map(async (remotePeerId) => {
         // Create the connection object
