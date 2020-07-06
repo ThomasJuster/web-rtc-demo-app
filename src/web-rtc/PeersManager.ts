@@ -1,4 +1,4 @@
-import { SocketAPI, SocketMessage } from '@web-rtc-demo/shared'
+import { SocketApi, SocketMessage } from '@web-rtc-demo/shared'
 import { PeerConnection } from './PeerConnection'
 import { ChatDataMessage } from './PeerChatAPI'
 
@@ -13,7 +13,7 @@ const RTC_OFFER_OPTIONS: RTCOfferOptions = {
 }
 
 interface PeersManagerInit {
-  socketAPI: SocketAPI;
+  socketApi: SocketApi;
   localPeerId: string;
   localStream: MediaStream;
 }
@@ -21,24 +21,28 @@ export class PeersManager extends EventTarget {
   public peerConnections: Map<PeerId, PeerConnection>
   private localPeerId: string
   private localStream: MediaStream
-  private socketAPI: SocketAPI
+  private socketApi: SocketApi
 
-  constructor ({ socketAPI, localPeerId, localStream }: PeersManagerInit) {
+  constructor ({ socketApi, localPeerId, localStream }: PeersManagerInit) {
     super()
-    this.socketAPI = socketAPI
+    this.socketApi = socketApi
     this.localPeerId = localPeerId
     this.localStream = localStream
     this.peerConnections = new Map()
 
-    socketAPI.onConnectedPeers((socketMessage) => this.sendOfferToConnectedPeers(socketMessage))
-    socketAPI.onOffer((socketMessage) => this.answerToReceivedOffer(socketMessage))
-    socketAPI.onAnswer((socketMessage) => this.acceptReceivedAnswer(socketMessage))
-    this.sendChatMessage = this.sendChatMessage.bind(this)
-    this.closeAllConnections = this.closeAllConnections.bind(this)
+    socketApi.onConnectedPeersId((socketMessage) => this.sendOfferToConnectedPeers(socketMessage))
+    socketApi.onOffer((socketMessage) => this.answerToReceivedOffer(socketMessage))
+    socketApi.onAnswer((socketMessage) => this.acceptReceivedAnswer(socketMessage))
+  }
+
+  public setLocalStream (stream: MediaStream): void {
+    this.peerConnections.forEach((peerConnection) => {
+      peerConnection.setLocalStream(stream)
+    })
   }
 
   public closeAllConnections () {
-    this.socketAPI.close()
+    this.socketApi.close()
   }
 
   public sendChatMessage (message: string) {
@@ -94,7 +98,7 @@ export class PeersManager extends EventTarget {
           localPeerId: this.localPeerId,
           remotePeerId,
           localStream: this.localStream,
-          socketAPI: this.socketAPI,
+          socketAPI: this.socketApi,
         })
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
         this.setPeerConnection(remotePeerId, peerConnection)
@@ -108,7 +112,7 @@ export class PeersManager extends EventTarget {
 
         console.debug('PeersManager: send offer to peer', remotePeerId, this)
         // Send the offer to the remote peer
-        this.socketAPI.send({
+        this.socketApi.send({
           type: 'offer',
           description: offer,
           offererId: this.localPeerId,
@@ -128,7 +132,7 @@ export class PeersManager extends EventTarget {
       localPeerId: this.localPeerId,
       remotePeerId: socketMessage.offererId,
       localStream: this.localStream,
-      socketAPI: this.socketAPI,
+      socketAPI: this.socketApi,
     })
     this.setPeerConnection(socketMessage.offererId, peerConnection)
 
@@ -146,7 +150,7 @@ export class PeersManager extends EventTarget {
 
     console.debug('PeersManager: send answer', this)
     // send the answer to the remote peer
-    this.socketAPI.send({
+    this.socketApi.send({
       type: 'answer',
       answererId: this.localPeerId,
       offererId: socketMessage.offererId,

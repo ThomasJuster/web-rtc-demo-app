@@ -1,4 +1,4 @@
-import { SocketAPI } from '@web-rtc-demo/shared'
+import { SocketApi } from '@web-rtc-demo/shared'
 import { PeerChatAPI } from './PeerChatAPI'
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -11,7 +11,7 @@ interface PeerConnectionInit {
   localPeerId: string;
   remotePeerId: string;
   localStream: MediaStream;
-  socketAPI: SocketAPI;
+  socketAPI: SocketApi;
 }
 
 // NOTE: A connection involves two peers, the local peer and the remote one.
@@ -20,7 +20,7 @@ export class PeerConnection extends EventTarget {
   public localPeerId: string
   public remotePeerId: string
   public peerChatAPI: PeerChatAPI | null
-  private socketAPI: SocketAPI
+  private socketAPI: SocketApi
 
   constructor (params: PeerConnectionInit) {
     super()
@@ -30,7 +30,7 @@ export class PeerConnection extends EventTarget {
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
     this.peerChatAPI = null
 
-    params.localStream.getTracks().map((track) => this.connection.addTrack(track, params.localStream))
+    this.setLocalStream(params.localStream)
     this.registerICECandidatesListener()
 
     this.connection.addEventListener('track', (event) => {
@@ -55,6 +55,10 @@ export class PeerConnection extends EventTarget {
           break
       }
     })
+  }
+
+  public setLocalStream (stream: MediaStream): void {
+    stream.getTracks().map((track) => this.connection.addTrack(track, stream))
   }
 
   public createChatDataChannel () {

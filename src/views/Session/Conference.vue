@@ -1,6 +1,6 @@
 <script>
 import Drawer from '../../components/Drawer.vue'
-import { SOCKET_ROUTE, SocketAPI } from '@web-rtc-demo/shared'
+import { SocketApi } from '@web-rtc-demo/shared'
 import { PeersManager } from '../../web-rtc/PeersManager'
 
 export default {
@@ -64,17 +64,14 @@ export default {
     const { serverUrl, sessionName } = this.$route.query
     const socketBaseUrl = new URL(serverUrl)
     socketBaseUrl.protocol = window.location.protocol.replace('http', 'ws')
-    const url = SOCKET_ROUTE
-      .replace('{sessionName}', sessionName)
-      .replace('{peerId}', this.localPeerId)
-    const socketAPI = new SocketAPI({
-      url: new URL(url, socketBaseUrl).href,
+    const socketApi = new SocketApi({
+      baseUrl: socketBaseUrl.href,
       sessionName,
-      peerId: this.localPeer,
+      peerId: this.localPeerId,
     })
 
     this.peersManager = new PeersManager({
-      socketAPI,
+      socketApi,
       localPeerId: this.localPeerId,
       localStream: this.localStream,
     })

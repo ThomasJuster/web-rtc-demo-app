@@ -1,5 +1,5 @@
 <script>
-import { ServerAPI } from '@web-rtc-demo/shared'
+import { ServerApi } from '@web-rtc-demo/shared'
 import Modal from '../../components/Modal.vue'
 
 export default {
@@ -14,12 +14,12 @@ export default {
   }),
   async mounted () {
     const { serverUrl, password, sessionName } = this.$route.query
-    const serverAPI = new ServerAPI({ url: new URL(serverUrl).origin })
+    const serverApi = new ServerApi({ baseUrl: serverUrl })
     if (typeof sessionName !== 'string') throw new Error('sessionName should be a string')
 
     this.joinSessionLoading = true
     try {
-      const joinSessionResult = await serverAPI.joinSession(sessionName, password)
+      const joinSessionResult = await serverApi.joinSession(sessionName, password)
       this.canJoinSession = joinSessionResult.ok
     } catch (error) {
       console.error(error)
