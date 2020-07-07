@@ -20,6 +20,7 @@ export default {
     messages: [],
     console: console,
     someoneIsSharingScreen: false,
+    recorder: null,
   }),
 
   methods: {
@@ -73,6 +74,8 @@ export default {
             if (!receivingChunks) {
               video.src = ''
               this.someoneIsSharingScreen = false
+              this.recorder.stop()
+              this.recorder = null
             }
           }, 500)
         })
@@ -91,7 +94,8 @@ export default {
     async shareScreen () {
       const stream = await window.navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
       console.debug('Conference: peersManager.shareScreen()')
-      this.peersManager.shareScreen(stream)
+      this.recorder = this.peersManager.shareScreen(stream)
+      this.recorder.start()
       // const localPeerVideo = this.$refs['local-peer-video']
       // localPeerVideo.srcObject = stream
       // this.peersManager.setLocalStream(stream)

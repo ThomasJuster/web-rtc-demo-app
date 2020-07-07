@@ -52,7 +52,7 @@ export class PeersManager extends EventTarget {
     return dataChannels
   }
 
-  public shareScreen (stream: MediaStream) {
+  public shareScreen (stream: MediaStream): MediaRecorder {
     const dataChannels = this.getScreenSharingDataChannels()
     const recorder = new MediaRecorder(stream)
     console.debug('PeersManager.shareScreen():', { dataChannels, recorder })
@@ -60,6 +60,7 @@ export class PeersManager extends EventTarget {
       console.debug('PeersManager.shareScreen() on data available')
       dataChannels.map((dataChannel) => dataChannel.send(data))
     })
+    return recorder
   }
 
   public closeAllConnections (): void {
