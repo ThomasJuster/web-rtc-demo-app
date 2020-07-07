@@ -16,7 +16,7 @@ interface PeerChatAPIInit {
   localPeerId: string;
 }
 
-export class PeerChatAPI extends EventTarget {
+export class PeerChatApi extends EventTarget {
   public dataChannel: RTCDataChannel
   private localPeerId: string
 
@@ -35,7 +35,7 @@ export class PeerChatAPI extends EventTarget {
     })
   }
 
-  public sendChatMessage (message: string): PeerChatAPI {
+  public sendChatMessage (message: string): PeerChatApi {
     const chatDataMessage: ChatDataMessage = {
       type: 'chat-message',
       author: this.localPeerId,
@@ -52,7 +52,7 @@ export class PeerChatAPI extends EventTarget {
   }
 }
 
-export interface PeerChatAPI extends EventTarget {
+export interface PeerChatApi extends EventTarget {
   addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
   addEventListener (type: 'chatmessage', listener: Listener<CustomEvent<ChatDataMessage>>): void;
   removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;

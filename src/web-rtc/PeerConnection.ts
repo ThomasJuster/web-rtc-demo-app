@@ -1,5 +1,5 @@
 import { SocketApi } from '@web-rtc-demo/shared'
-import { PeerChatAPI } from './PeerChatAPI'
+import { PeerChatApi } from './PeerChatApi'
 
 const ICE_SERVERS: RTCIceServer[] = [
   // { urls: 'stun:stunserver.org:3478' },
@@ -11,7 +11,7 @@ interface PeerConnectionInit {
   localPeerId: string;
   remotePeerId: string;
   localStream: MediaStream;
-  socketAPI: SocketApi;
+  socketApi: SocketApi;
 }
 
 // NOTE: A connection involves two peers, the local peer and the remote one.
@@ -19,16 +19,18 @@ export class PeerConnection extends EventTarget {
   public connection: RTCPeerConnection
   public localPeerId: string
   public remotePeerId: string
-  public peerChatAPI: PeerChatAPI | null
-  private socketAPI: SocketApi
+  public peerChatApi: PeerChatApi | null
+  public dataChannels: Map<string, RTCDataChannel>
+  private socketApi: SocketApi
 
   constructor (params: PeerConnectionInit) {
     super()
     this.localPeerId = params.localPeerId
     this.remotePeerId = params.remotePeerId
-    this.socketAPI = params.socketAPI
+    this.socketApi = params.socketApi
     this.connection = new RTCPeerConnection({ iceServers: ICE_SERVERS })
-    this.peerChatAPI = null
+    this.peerChatApi = null
+    this.dataChannels = new Map()
 
     this.setLocalStream(params.localStream)
     this.registerICECandidatesListener()
@@ -40,7 +42,7 @@ export class PeerConnection extends EventTarget {
 
     this.connection.addEventListener('datachannel', (event) => {
       console.debug('PeerConnection: received datachannel')
-      this.setChatDataChannel(event.channel)
+      this.setDataChannel(event.channel)
     })
 
     this.connection.addEventListener('connectionstatechange', (event) => {
@@ -68,23 +70,32 @@ export class PeerConnection extends EventTarget {
     })
   }
 
-  public createChatDataChannel () {
-    console.debug('PeerConnection: create and share datachannel')
-    this.setChatDataChannel(this.connection.createDataChannel('chat', { priority: 'high' }))
+  public createDataChannel (label: string, options?: RTCDataChannelInit): void {
+    console.debug('PeerConnection: createDataChannel')
+    this.setDataChannel(this.connection.createDataChannel(label, options))
   }
 
-  public setChatDataChannel (dataChannel: RTCDataChannel) {
-    this.peerChatAPI = new PeerChatAPI({
+  private setDataChannel (dataChannel: RTCDataChannel): void {
+    this.dataChannels.set(dataChannel.label, dataChannel)
+    this.dispatchEvent(new CustomEvent('datachannelopen', { detail: dataChannel }))
+    this.addEventListener('connectionclose', () => {
+      dataChannel.close()
+      this.dataChannels.delete(dataChannel.label)
+    })
+    if (dataChannel.label === 'chat') {
+      this.setPeerChatApi(dataChannel)
+    }
+  }
+
+  private setPeerChatApi (dataChannel: RTCDataChannel) {
+    this.peerChatApi = new PeerChatApi({
       dataChannel,
       localPeerId: this.localPeerId
     })
-    this.dispatchChatApiOpen(this.peerChatAPI)
-    this.addEventListener('connectionclose', () => {
-      if (this.peerChatAPI) this.peerChatAPI.dataChannel.close()
-    })
+    this.dispatchChatApiOpen(this.peerChatApi)
   }
 
-  private dispatchChatApiOpen (peerChatAPI: PeerChatAPI): void {
+  private dispatchChatApiOpen (peerChatAPI: PeerChatApi): void {
     this.dispatchEvent(new CustomEvent('chatapiopen', { detail: peerChatAPI }))
   }
 
@@ -104,7 +115,7 @@ export class PeerConnection extends EventTarget {
       if (!event.candidate) return
       // console.debug('PeerConnection: emit ICE candidate to', this.remotePeerId, event.candidate)
       // console.debug('PeerConnection: PeerConnection send ICE candidates')
-      this.socketAPI.send({
+      this.socketApi.send({
         type: 'ice-candidate',
         candidate: event.candidate,
         fromPeerId: this.localPeerId,
@@ -114,7 +125,7 @@ export class PeerConnection extends EventTarget {
 
     // when receiving a remote peer’s ICE candidates, we can add them to the PeerConnection to make the connection effective
     // without ICE candidates, the connection would exist but it’d be useless, it’s ICE candidates that allow exchanging data
-    this.socketAPI.onIceCandidate((data) => {
+    this.socketApi.onIceCandidate((data) => {
       if (data.type !== 'ice-candidate') return
       // console.debug('PeerConnection:', this.localPeerId, 'receive ice candidate from', data.fromPeerId, data.candidate)
       this.connection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error)
@@ -130,12 +141,12 @@ export interface PeerConnection extends EventTarget {
   addEventListener (type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
   addEventListener (type: 'remotestream', listener: Listener<CustomEvent<MediaStream>>): void;
   addEventListener (type: 'connectionclose', listener: Listener<Event>): void;
-  addEventListener (type: 'chatapiopen', listener: Listener<CustomEvent<PeerChatAPI>>): void;
+  addEventListener (type: 'chatapiopen', listener: Listener<CustomEvent<PeerChatApi>>): void;
   removeEventListener (type: string, callback: EventListenerOrEventListenerObject | null, options?: EventListenerOptions | boolean): void;
   removeEventListener (type: 'remotestream', listener: Listener): void;
   removeEventListener (type: 'connectionclose', listener: Listener): void;
   removeEventListener (type: 'chatapiopen', listener: Listener): void;
   dispatchEvent (event: Event): boolean;
   dispatchEvent (event: CustomEvent<MediaStream>): void;
-  dispatchEvent (event: CustomEvent<PeerChatAPI>): void;
+  dispatchEvent (event: CustomEvent<PeerChatApi>): void;
 }

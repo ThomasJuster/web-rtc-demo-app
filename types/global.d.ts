@@ -1,3 +1,4 @@
+import '@types/dom-mediacapture-record'
 export {}
 
 declare global {

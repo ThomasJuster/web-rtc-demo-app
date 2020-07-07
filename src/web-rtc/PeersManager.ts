@@ -1,6 +1,6 @@
 import { SocketApi, SocketMessage, SocketMessageConnectedPeersId } from '@web-rtc-demo/shared'
 import { PeerConnection } from './PeerConnection'
-import { ChatDataMessage } from './PeerChatAPI'
+import { ChatDataMessage } from './PeerChatApi'
 
 type PeerId = string
 
@@ -36,11 +36,30 @@ export class PeersManager extends EventTarget {
   }
 
   public setLocalStream (stream: MediaStream): void {
-    // this.peerConnections.forEach((peerConnection) => {
-    //   peerConnection.setLocalStream(stream)
-    // })
     this.localStream = stream
     this.sendOfferToConnectedPeers(Array.from(this.peerConnections.keys()))
+  }
+
+  public getScreenSharingDataChannels (): RTCDataChannel[] {
+    const dataChannels: RTCDataChannel[] = []
+    this.peerConnections.forEach((peerConnection) => {
+      peerConnection.dataChannels.forEach((dataChannel) => {
+        if (dataChannel.label === 'screen-sharing') {
+          dataChannels.push(dataChannel)
+        }
+      })
+    })
+    return dataChannels
+  }
+
+  public shareScreen (stream: MediaStream) {
+    const dataChannels = this.getScreenSharingDataChannels()
+    const recorder = new MediaRecorder(stream)
+    console.debug('PeersManager.shareScreen():', { dataChannels, recorder })
+    recorder.addEventListener('dataavailable', ({ data }) => {
+      console.debug('PeersManager.shareScreen() on data available')
+      dataChannels.map((dataChannel) => dataChannel.send(data))
+    })
   }
 
   public closeAllConnections (): void {
@@ -51,10 +70,10 @@ export class PeersManager extends EventTarget {
     console.info('peer connections', this.peerConnections)
     this.peerConnections.forEach((peerConnection) => {
       console.debug('PeersManager: sendChatMessage', message, peerConnection, this)
-      if (!peerConnection.peerChatAPI) {
+      if (!peerConnection.peerChatApi) {
         window.alert('He-hem, wait a bit')
       } else {
-        peerConnection.peerChatAPI.sendChatMessage(message)
+        peerConnection.peerChatApi.sendChatMessage(message)
       }
     })
   }
@@ -99,13 +118,14 @@ export class PeersManager extends EventTarget {
           localPeerId: this.localPeerId,
           remotePeerId,
           localStream: this.localStream,
-          socketAPI: this.socketApi,
+          socketApi: this.socketApi,
         })
         console.debug('PeersManager: set peer connection with', remotePeerId, this)
         this.setPeerConnection(remotePeerId, peerConnection)
 
         console.debug('PeersManager: before offer, create chat data channel')
-        peerConnection.createChatDataChannel()
+        peerConnection.createDataChannel('chat', { priority: 'low' })
+        peerConnection.createDataChannel('screen-sharing', { priority: 'high' })
 
         // Create an offer
         const offer = await peerConnection.connection.createOffer(RTC_OFFER_OPTIONS)
@@ -133,7 +153,7 @@ export class PeersManager extends EventTarget {
       localPeerId: this.localPeerId,
       remotePeerId: socketMessage.offererId,
       localStream: this.localStream,
-      socketAPI: this.socketApi,
+      socketApi: this.socketApi,
     })
     this.setPeerConnection(socketMessage.offererId, peerConnection)
 
@@ -141,13 +161,6 @@ export class PeersManager extends EventTarget {
     await peerConnection.connection.setRemoteDescription(socketMessage.description)
     const answer = await peerConnection.connection.createAnswer(RTC_OFFER_OPTIONS)
     await peerConnection.connection.setLocalDescription(answer)
-
-    console.debug('PeersManager: before answer, add listener on "datachannel"')
-    peerConnection.connection.addEventListener('datachannel', (event) => {
-      console.debug('PeersManager: "datachannel" event triggered', event, this)
-      if (event.channel.label !== 'chat') return
-      peerConnection.setChatDataChannel(event.channel)
-    })
 
     console.debug('PeersManager: send answer', this)
     // send the answer to the remote peer

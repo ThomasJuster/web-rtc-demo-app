@@ -19,6 +19,7 @@ export default {
     peers: [],
     messages: [],
     console: console,
+    someoneIsSharingScreen: false,
   }),
 
   methods: {
@@ -46,27 +47,59 @@ export default {
           video.srcObject = event.detail
         })
       })
+
+      peerConnection.addEventListener('connectionclose', () => {
+        console.debug('Conference: Event -> peer connection close')
+        this.peers = this.peers.filter((peerId) => peerId !== peerConnection.remotePeerId)
+      })
+
+      peerConnection.connection.addEventListener('datachannel', ({ channel }) => {
+        if (channel.label !== 'screen-sharing') return
+        const video = this.$refs.screenSharing
+        let receivingChunks = false
+        console.debug('Conference: on data channel of label "screen-sharing"', { channel, video })
+        channel.addEventListener('message', ({ data }) => {
+          console.debug('Conference: on data channel receive message', data)
+          const blobUrl = URL.createObjectURL(data)
+          video.src = blobUrl
+          this.someoneIsSharingScreen = true
+          receivingChunks = true
+        })
+        video.addEventListener('suspend', () => {
+          receivingChunks = false
+          console.debug('Conference: on screen sharing video suspend')
+          window.setTimeout(() => {
+            console.debug('Conference: on suspend -> should stop showing video ?', receivingChunks)
+            if (!receivingChunks) {
+              video.src = ''
+              this.someoneIsSharingScreen = false
+            }
+          }, 500)
+        })
+      })
     },
 
     onChatMessage (chatDataMessage) {
       this.messages.push(chatDataMessage)
     },
 
-    openDrawer () {
+    openChatDrawer () {
       this.isChatDrawerOpened = true
       this.$refs['chat-input'].focus()
     },
 
     async shareScreen () {
       const stream = await window.navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
-      const localPeerVideo = this.$refs['local-peer-video']
-      localPeerVideo.srcObject = stream
-      this.peersManager.setLocalStream(stream)
-      localPeerVideo.addEventListener('suspend', () => {
-        // it means the local peer has stopped sharing his/her screen
-        localPeerVideo.srcObject = this.localStream
-        this.peersManager.setLocalStream(this.localStream)
-      })
+      console.debug('Conference: peersManager.shareScreen()')
+      this.peersManager.shareScreen(stream)
+      // const localPeerVideo = this.$refs['local-peer-video']
+      // localPeerVideo.srcObject = stream
+      // this.peersManager.setLocalStream(stream)
+      // localPeerVideo.addEventListener('suspend', () => {
+      //   // it means the local peer has stopped sharing his/her screen
+      //   localPeerVideo.srcObject = this.localStream
+      //   this.peersManager.setLocalStream(this.localStream)
+      // })
     },
   },
 
@@ -111,7 +144,7 @@ export default {
   <div>
     <h3>{{ `Conference ${$route.query.sessionName} − ${localPeerId}` }}</h3>
     <p>
-      <button v-on:click="openDrawer">{{ 'Open chat' }}</button>
+      <button v-on:click="openChatDrawer">{{ 'Open chat' }}</button>
     </p>
     <p>
       <button v-on:click="shareScreen">{{ 'Share your screen' }}</button>
@@ -133,6 +166,11 @@ export default {
         <button type="submit">{{ 'Send 👻' }}</button>
       </form>
     </Drawer>
+
+    <Drawer position="right" :open="someoneIsSharingScreen">
+      <video ref="screenSharing" :autoplay="''" :muted="''" :playsinline="''"></video>
+    </Drawer>
+
     <video ref="local-peer-video" :playsinline="''" :autoplay="''" :muted="''"></video>
     <video v-for="peer in peers" :key="peer" :id="`video-${peer}`" :playsinline="''" :autoplay="''"></video>
     <template v-for="peer in peers">
